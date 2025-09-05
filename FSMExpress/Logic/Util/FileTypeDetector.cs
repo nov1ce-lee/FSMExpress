@@ -52,10 +52,10 @@ public static partial class FileTypeDetector
         return DetectedFileType.Unknown;
     }
 
-    [GeneratedRegex("[a-zA-Z0-9\\.\\n]")]
+    [GeneratedRegex("[a-zA-Z0-9\\-\\.\\n]")]
     private static partial Regex PrintableEmptyVersionRegex();
 
-    [GeneratedRegex("[^a-zA-Z0-9\\.\\n]")]
+    [GeneratedRegex("[^a-zA-Z0-9\\-\\.\\n]")]
     private static partial Regex PrintableFullVersionRegex();
 }
 
