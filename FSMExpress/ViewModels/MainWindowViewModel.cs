@@ -1,4 +1,6 @@
-﻿using AssetsTools.NET.Extra;
+﻿using AddressablesTools;
+using AddressablesTools.Catalog;
+using AssetsTools.NET.Extra;
 using Avalonia.Platform.Storage;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.DependencyInjection;
@@ -9,14 +11,19 @@ using FSMExpress.Logic.Util;
 using FSMExpress.PlayMaker;
 using FSMExpress.Services;
 using FSMExpress.ViewModels.Dialogs;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace FSMExpress.ViewModels;
 public partial class MainWindowViewModel : ViewModelBase
 {
     private readonly AssetsManager _manager = new();
+
+    private ContentCatalogData? _catalog = null;
+    private readonly Dictionary<string, List<string>> _catalogDeps = [];
 
     [ObservableProperty]
     private string? _lastOpenedPath = null;
@@ -57,21 +64,38 @@ public partial class MainWindowViewModel : ViewModelBase
 
     public async Task<AssetExternal?> PickFsm(string filePath)
     {
+        AssetsFileInstance fileInst;
+
         var dialogService = Ioc.Default.GetRequiredService<IDialogService>();
 
         var fileType = FileTypeDetector.DetectFileType(filePath);
         if (fileType == DetectedFileType.BundleFile)
         {
-            await MessageBoxUtil.ShowDialog("Unsupported type", "Sorry, bundles aren't supported yet.");
-            return null;
+            if (_catalog is not null)
+            {
+                LoadCatalogDeps(filePath);
+            }
+
+            var bunInst = _manager.LoadBundleFile(filePath);
+            var maybeFileInst = LoadBundleMainFile(bunInst);
+            if (maybeFileInst == null)
+            {
+                await MessageBoxUtil.ShowDialog("Unsupported type", "Sorry, unsure which file to open in this bundle.");
+                return null;
+            }
+
+            fileInst = maybeFileInst;
         }
-        else if (fileType == DetectedFileType.Unknown)
+        else if (fileType == DetectedFileType.AssetsFile)
+        {
+            fileInst = _manager.LoadAssetsFile(filePath);
+        }
+        else //if (fileType == DetectedFileType.Unknown)
         {
             await MessageBoxUtil.ShowDialog("Unsupported type", "Could not detect this as a valid Unity file.");
             return null;
         }
 
-        var fileInst = _manager.LoadAssetsFile(filePath);
         if (!_manager.LoadClassDatabase(fileInst))
         {
             await MessageBoxUtil.ShowDialog("Class database failed to load", "Couldn't load class database class. Check if classdata.tpk exists?");
@@ -82,7 +106,7 @@ public partial class MainWindowViewModel : ViewModelBase
         if (fsmChoice == null)
             return null;
 
-        var fsmFileInst = _manager.FileLookup[fsmChoice.Ptr.FilePath];
+        var fsmFileInst = _manager.FileLookup[fsmChoice.Ptr.FilePath.ToLowerInvariant()];
         return _manager.GetExtAsset(fsmFileInst, 0, fsmChoice.Ptr.PathId);
     }
 
@@ -173,6 +197,54 @@ public partial class MainWindowViewModel : ViewModelBase
         LoadPlaymakerFsm(selectedFsm.Value);
     }
 
+    public async void FileOpenCatalog()
+    {
+        string? catalogPath;
+        if (ConfigurationManager.Settings.DefaultGamePath is not null)
+        {
+            catalogPath = Path.Combine(ConfigurationManager.Settings.DefaultGamePath, "StreamingAssets/aa/catalog.bin");
+            if (!File.Exists(catalogPath))
+            {
+                catalogPath = Path.Combine(ConfigurationManager.Settings.DefaultGamePath, "StreamingAssets/aa/catalog.json");
+                if (!File.Exists(catalogPath))
+                {
+                    return;
+                }
+            }
+        }
+        else
+        {
+            catalogPath = await PickGamePathWithFile("StreamingAssets/aa/catalog.bin", "StreamingAssets/aa/catalog.json");
+        }
+
+        if (catalogPath is null || !File.Exists(catalogPath))
+            return;
+
+        // read catalog
+        CatalogFileType fileType = CatalogFileType.None;
+        using (FileStream fs = File.OpenRead(catalogPath))
+        {
+            fileType = AddressablesCatalogFileParser.GetCatalogFileType(fs);
+        }
+
+        switch (fileType)
+        {
+            case CatalogFileType.Json:
+                _catalog = AddressablesCatalogFileParser.FromJsonString(File.ReadAllText(catalogPath));
+                break;
+            case CatalogFileType.Binary:
+                _catalog = AddressablesCatalogFileParser.FromBinaryData(File.ReadAllBytes(catalogPath));
+                break;
+            default:
+                await MessageBoxUtil.ShowDialog("Invalid catalog", "Couldn't detect catalog file format.");
+                return;
+        }
+
+        // generate lookup
+        var aaPath = Path.GetDirectoryName(catalogPath)!;
+        GenerateCatalogDepLookup(_catalog, aaPath);
+    }
+
     public async void FileOpenLast()
     {
         if (LastOpenedPath is null)
@@ -213,9 +285,12 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         ActiveDocument = null;
         Documents.Clear();
+
+        _manager.UnloadAllAssetsFiles(true);
+        _manager.UnloadAllBundleFiles();
     }
 
-    private static async Task<string?> PickGamePathWithFile(string fileName)
+    private static async Task<string?> PickGamePathWithFile(params string[] fileNames)
     {
         var storageProvider = StorageService.GetStorageProvider();
         if (storageProvider is null)
@@ -231,13 +306,127 @@ public partial class MainWindowViewModel : ViewModelBase
             return null;
 
         var folderName = folderNames[0];
-        var filePath = Path.Combine(folderName, fileName);
-        if (!File.Exists(filePath))
+
+        var foundFilePath = string.Empty;
+        if (fileNames.Length == 1)
         {
-            await MessageBoxUtil.ShowDialog($"No {fileName}", $"Couldn't load {fileName}. Did you open the right folder?");
-            return null;
+            var fileName = fileNames[0];
+            var filePath = Path.Combine(folderName, fileName);
+            if (!File.Exists(filePath))
+            {
+                await MessageBoxUtil.ShowDialog($"No {fileName}", $"Couldn't load {fileName}. Did you open the right folder?");
+                return null;
+            }
+
+            foundFilePath = filePath;
+        }
+        else if (fileNames.Length > 1)
+        {
+            bool success = false;
+            foreach (var fileName in fileNames)
+            {
+                var filePath = Path.Combine(folderName, fileName);
+                if (File.Exists(filePath))
+                {
+                    success = true;
+                    foundFilePath = filePath;
+                    break;
+                }
+            }
+
+            if (!success)
+            {
+                var firstFileName = fileNames[0];
+                await MessageBoxUtil.ShowDialog($"No {firstFileName} or others", $"Couldn't load {firstFileName}, among other files. Did you open the right folder?");
+                return null;
+            }
         }
 
-        return filePath;
+        return foundFilePath;
+    }
+
+    private void GenerateCatalogDepLookup(ContentCatalogData catalog, string aaPath)
+    {
+        _catalogDeps.Clear();
+        foreach (var rsrcLocs in catalog.Resources.Values)
+        {
+            foreach (var rsrcLoc in rsrcLocs)
+            {
+                if (rsrcLoc.ProviderId == "UnityEngine.ResourceManagement.ResourceProviders.BundledAssetProvider")
+                {
+                    List<ResourceLocation> locDeps;
+                    if (rsrcLoc.Dependencies != null)
+                    {
+                        // new version
+                        locDeps = rsrcLoc.Dependencies;
+                    }
+                    else if (rsrcLoc.DependencyKey != null)
+                    {
+                        // old version
+                        locDeps = catalog.Resources[rsrcLoc.DependencyKey];
+                    }
+                    else
+                    {
+                        continue;
+                    }
+
+                    if (locDeps.Count < 1)
+                    {
+                        continue;
+                    }
+
+                    var baseBundlePath = CatalogPathToAbsolutePath(locDeps[0].InternalId, aaPath);
+                    var bundleDepPaths = new List<string>();
+                    if (locDeps.Count > 1)
+                    {
+                        for (int i = 1; i < locDeps.Count; i++)
+                        {
+                            bundleDepPaths.Add(CatalogPathToAbsolutePath(locDeps[i].InternalId, aaPath));
+                        }
+                    }
+
+                    _catalogDeps[baseBundlePath] = bundleDepPaths;
+                }
+            }
+        }
+    }
+
+    private static string CatalogPathToAbsolutePath(string catalogPath, string aaPath)
+    {
+        return Path.GetFullPath(catalogPath
+            .Replace("{UnityEngine.AddressableAssets.Addressables.RuntimePath}", aaPath)
+            .Replace('\\', '/'));
+    }
+
+    private void LoadCatalogDeps(string bundlePath)
+    {
+        if (_catalog is null)
+            return;
+
+        bundlePath = Path.GetFullPath(bundlePath);
+
+        if (!_catalogDeps.TryGetValue(bundlePath, out var depPaths))
+            return;
+
+        foreach (var depPath in depPaths)
+        {
+            string lookupKey = AssetsManager.GetFileLookupKey(depPath);
+            if (!_manager.BundleLookup.TryGetValue(lookupKey, out var bunInst))
+                bunInst = _manager.LoadBundleFile(depPath);
+
+            // ignore result, we just want the bundle loaded
+            LoadBundleMainFile(bunInst);
+        }
+    }
+
+    private AssetsFileInstance? LoadBundleMainFile(BundleFileInstance bunInst)
+    {
+        var dirInf = bunInst.file.BlockAndDirInfo.DirectoryInfos.FirstOrDefault(i => (i.Flags & 4) != 0 && !i.Name.EndsWith(".sharedAssets"));
+        if (dirInf is not null)
+        {
+            return _manager.LoadAssetsFileFromBundle(bunInst, dirInf.Name);
+        }
+
+        return null;
     }
 }

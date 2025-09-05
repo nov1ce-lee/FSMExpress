@@ -18,7 +18,14 @@ public class FsmTemplateControl : IFsmPlaymakerValuePreviewer
 
     public FsmTemplateControl(IAssetField field)
     {
-        FsmTemplate = field.GetValue<NamedAssetPPtr>("fsmTemplate");
-        FsmVarOverrides = field.GetValueArray("fsmVarOverrides", x => new FsmVarOverride(x));
+        if (field.Exists("fsmTemplate"))
+            FsmTemplate = field.GetValue<NamedAssetPPtr>("fsmTemplate");
+        else
+            FsmTemplate = new NamedAssetPPtr();
+
+        if (field.Exists("fsmVarOverrides"))
+            FsmVarOverrides = field.GetValueArray("fsmVarOverrides", x => new FsmVarOverride(x));
+        else
+            FsmVarOverrides = [];
     }
 }

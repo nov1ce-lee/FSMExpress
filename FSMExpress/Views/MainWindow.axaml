@@ -136,6 +136,9 @@
           Header="Open _resources.assets" Command="{Binding FileOpenResourcesAssets}"
           HotKey="Ctrl+R" InputGesture="Ctrl+R" />
         <MenuItem
+          Header="Open _catalog" Command="{Binding FileOpenCatalog}"
+          HotKey="Ctrl+Shift+C" InputGesture="Ctrl+Shift+C" />
+        <MenuItem
           Header="Open _last" Command="{Binding FileOpenLast}"
           IsEnabled="{Binding LastOpenedPath, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
           HotKey="Ctrl+T" InputGesture="Ctrl+T" />

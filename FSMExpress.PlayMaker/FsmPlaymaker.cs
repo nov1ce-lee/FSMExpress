@@ -70,6 +70,9 @@ public class FsmPlaymaker : IFsmMonoBehaviour
             docNode.Bounds = new RectangleF(statePos.X, statePos.Y, statePos.Width, statePos.Height);
 
             var stateColor = state.ColorIndex;
+            if (stateColor >= STATE_COLORS.Length)
+                stateColor = (byte)(STATE_COLORS.Length - 1); // todo: fix new colors!
+
             docNode.NodeColor = STATE_COLORS[stateColor];
             docNode.TransitionColor = TRANSITION_COLORS[stateColor];
 
