@@ -42,7 +42,7 @@ internal sealed class Program
             }
             else
             {
-                Console.WriteLine("uabea crash exception (please report this crash with fsmexpcrash.log)");
+                Console.WriteLine("fsmexp crash exception (please report this crash with fsmexpcrash.log)");
                 Console.WriteLine(ex.ToString());
             }
         }
