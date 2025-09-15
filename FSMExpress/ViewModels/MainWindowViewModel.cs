@@ -249,6 +249,10 @@ public partial class MainWindowViewModel : ViewModelBase
         // generate lookup
         var aaPath = Path.GetDirectoryName(catalogPath)!;
         GenerateCatalogDepLookup(_catalog, aaPath);
+
+        TitleText = $"{DEFAULT_TITLE_TEXT} (Loaded catalog)";
+        await Task.Delay(3000);
+        TitleText = DEFAULT_TITLE_TEXT;
     }
 
     public async void FileOpenLast()
