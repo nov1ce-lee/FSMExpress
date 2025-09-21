@@ -106,6 +106,12 @@ public partial class FsmSelectorViewModel : ViewModelBase, IDialogAware<FsmSelec
                 var fsmPtr = new AssetPPtr(_fileInst.name, info.PathId);
                 _internalEntries.Add(new FsmSelectorListEntry(fsmName, fsmPtr));
             }
+            if (fsmTemplateSis.Contains(infoSi))
+            {
+                var fsmName = GetFSMNameFastTemplate(_manager, _fileInst, info, afNamer);
+                var fsmPtr = new AssetPPtr(_fileInst.name, info.PathId);
+                _internalEntries.Add(new FsmSelectorListEntry(fsmName, fsmPtr));
+            }
         }
 
         _internalEntries.Sort((a, b) => a.Name.CompareTo(b.Name));
@@ -134,6 +140,28 @@ public partial class FsmSelectorViewModel : ViewModelBase, IDialogAware<FsmSelec
         var goPtr = monoBf["m_GameObject"];
         var goName = namer.GetName(goPtr["m_FileID"].AsInt, goPtr["m_PathID"].AsLong);
         return $"{goName} - {fsmName}";
+    }
+
+    private static string GetFSMNameFastTemplate(AssetsManager manager, AssetsFileInstance fileInst, AssetFileInfo info, AfAssetNamer namer)
+    {
+        var fsmTemp = manager.GetTemplateBaseField(fileInst, info);
+
+        var nameIndex = fsmTemp.Children.FindIndex(monoTemp => monoTemp.Name == "name");
+        if (nameIndex != -1)
+        {
+            fsmTemp.Children.RemoveRange(nameIndex + 1, fsmTemp.Children.Count - (nameIndex + 1));
+        }
+
+        AssetTypeValueField? monoBf;
+        lock (fileInst.LockReader)
+        {
+            monoBf = fsmTemp.MakeValue(fileInst.file.Reader, info.GetAbsoluteByteOffset(fileInst.file));
+        }
+        var fsmName = monoBf["fsm"]["name"].AsString;
+        var m_name = monoBf["m_Name"].AsString;
+        var goPtr = monoBf["m_GameObject"];
+        var goName = namer.GetName(goPtr["m_FileID"].AsInt, goPtr["m_PathID"].AsLong);
+        return $"{goName} - {fsmName} - {m_name}";
     }
 
     public void PickSelectedEntry()
