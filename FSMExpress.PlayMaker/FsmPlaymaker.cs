@@ -436,71 +436,62 @@ public class FsmPlaymaker : IFsmMonoBehaviour
         r.BaseStream.Position = paramDataPos;
 
         object ret;
-        if (WillTypeReadBuffer(paramDataType, Version) && paramByteDataSize == 0)
+        try
         {
-            // we are supposed to read the buffer but we're told our buffer read size is 0...
-            // this is probably due to a bug in playmaker's editor script
-            ret = $"[invalid {paramDataType} variable]";
-        }
-        else
-        {
-            try
+            ret = paramDataType switch
             {
-                ret = paramDataType switch
-                {
-                    ParamDataType.Integer => r.ReadInt32(),
-                    ParamDataType.FsmInt when Version == 1 => new FsmInt { Value = r.ReadInt32() },
-                    ParamDataType.Enum => r.ReadInt32(),
-                    ParamDataType.Boolean => r.ReadBoolean(),
-                    ParamDataType.FsmBool when Version == 1 => new FsmBool { Value = r.ReadBoolean() },
-                    ParamDataType.Float => r.ReadSingle(),
-                    ParamDataType.FsmFloat when Version == 1 => new FsmFloat { Value = r.ReadSingle() },
-                    ParamDataType.String => Encoding.UTF8.GetString(r.ReadBytes(paramByteDataSize)),
-                    ParamDataType.FsmEvent when Version == 1 => new FsmEvent { Name = Encoding.UTF8.GetString(r.ReadBytes(paramByteDataSize)) },
-                    ParamDataType.Vector2 => new Vector2 { X = r.ReadSingle(), Y = r.ReadSingle() },
-                    ParamDataType.FsmVector2 when Version == 1 => new FsmVector2 { Value = new Vector2 { X = r.ReadSingle(), Y = r.ReadSingle() } },
-                    ParamDataType.Vector3 => new Vector3 { X = r.ReadSingle(), Y = r.ReadSingle(), Z = r.ReadSingle() },
-                    ParamDataType.FsmVector3 when Version == 1 => new FsmVector3 { Value = new Vector3 { X = r.ReadSingle(), Y = r.ReadSingle(), Z = r.ReadSingle() } },
-                    ParamDataType.Quaternion => new Quaternion { X = r.ReadSingle(), Y = r.ReadSingle(), Z = r.ReadSingle(), W = r.ReadSingle() },
-                    ParamDataType.FsmQuaternion when Version == 1 => new FsmQuaternion { Value = new Quaternion { X = r.ReadSingle(), Y = r.ReadSingle(), Z = r.ReadSingle(), W = r.ReadSingle() } },
-                    ParamDataType.Color => new EngineColor { R = r.ReadSingle(), G = r.ReadSingle(), B = r.ReadSingle(), A = r.ReadSingle() },
-                    ParamDataType.FsmColor when Version == 1 => new FsmColor { Value = new EngineColor { R = r.ReadSingle(), G = r.ReadSingle(), B = r.ReadSingle(), A = r.ReadSingle() } },
-                    ParamDataType.Rect => new Rect { X = r.ReadSingle(), Y = r.ReadSingle(), Width = r.ReadSingle(), Height = r.ReadSingle() },
-                    ParamDataType.FsmRect when Version == 1 => new FsmRect { Value = new Rect { X = r.ReadSingle(), Y = r.ReadSingle(), Width = r.ReadSingle(), Height = r.ReadSingle() } },
-                    /////////////////////////////////////////////////////////
+                ParamDataType.Integer => r.ReadInt32(),
+                ParamDataType.FsmInt when Version == 1 => new FsmInt { Value = r.ReadInt32() },
+                ParamDataType.Enum => r.ReadInt32(),
+                ParamDataType.Boolean => r.ReadBoolean(),
+                ParamDataType.FsmBool when Version == 1 => new FsmBool { Value = r.ReadBoolean() },
+                ParamDataType.Float => r.ReadSingle(),
+                ParamDataType.FsmFloat when Version == 1 => new FsmFloat { Value = r.ReadSingle() },
+                ParamDataType.String => Encoding.UTF8.GetString(r.ReadBytes(paramByteDataSize)),
+                ParamDataType.FsmEvent when Version == 1 => new FsmEvent { Name = Encoding.UTF8.GetString(r.ReadBytes(paramByteDataSize)) },
+                ParamDataType.Vector2 => new Vector2 { X = r.ReadSingle(), Y = r.ReadSingle() },
+                ParamDataType.FsmVector2 when Version == 1 => new FsmVector2 { Value = new Vector2 { X = r.ReadSingle(), Y = r.ReadSingle() } },
+                ParamDataType.Vector3 => new Vector3 { X = r.ReadSingle(), Y = r.ReadSingle(), Z = r.ReadSingle() },
+                ParamDataType.FsmVector3 when Version == 1 => new FsmVector3 { Value = new Vector3 { X = r.ReadSingle(), Y = r.ReadSingle(), Z = r.ReadSingle() } },
+                ParamDataType.Quaternion => new Quaternion { X = r.ReadSingle(), Y = r.ReadSingle(), Z = r.ReadSingle(), W = r.ReadSingle() },
+                ParamDataType.FsmQuaternion when Version == 1 => new FsmQuaternion { Value = new Quaternion { X = r.ReadSingle(), Y = r.ReadSingle(), Z = r.ReadSingle(), W = r.ReadSingle() } },
+                ParamDataType.Color => new EngineColor { R = r.ReadSingle(), G = r.ReadSingle(), B = r.ReadSingle(), A = r.ReadSingle() },
+                ParamDataType.FsmColor when Version == 1 => new FsmColor { Value = new EngineColor { R = r.ReadSingle(), G = r.ReadSingle(), B = r.ReadSingle(), A = r.ReadSingle() } },
+                ParamDataType.Rect => new Rect { X = r.ReadSingle(), Y = r.ReadSingle(), Width = r.ReadSingle(), Height = r.ReadSingle() },
+                ParamDataType.FsmRect when Version == 1 => new FsmRect { Value = new Rect { X = r.ReadSingle(), Y = r.ReadSingle(), Width = r.ReadSingle(), Height = r.ReadSingle() } },
+                /////////////////////////////////////////////////////////
 
-                    ParamDataType.FsmBool when Version > 1 => actionData.FsmBoolParams[paramDataPos],
-                    ParamDataType.FsmInt when Version > 1 => actionData.FsmIntParams[paramDataPos],
-                    ParamDataType.FsmFloat when Version > 1 => actionData.FsmFloatParams[paramDataPos],
-                    ParamDataType.FsmVector2 when Version > 1 => actionData.FsmVector2Params[paramDataPos],
-                    ParamDataType.FsmVector3 when Version > 1 => actionData.FsmVector3Params[paramDataPos],
-                    ParamDataType.FsmQuaternion when Version > 1 => actionData.FsmQuaternionParams[paramDataPos],
-                    ParamDataType.FsmColor when Version > 1 => actionData.FsmColorParams[paramDataPos],
-                    ParamDataType.FsmRect when Version > 1 => actionData.FsmRectParams[paramDataPos],
-                    ///////////////////////////////////////////////////////// 
-                    ParamDataType.FsmEnum => actionData.FsmEnumParams[paramDataPos],
-                    ParamDataType.FsmGameObject => actionData.FsmGameObjectParams[paramDataPos],
-                    ParamDataType.FsmOwnerDefault => actionData.FsmOwnerDefaultParams[paramDataPos],
-                    ParamDataType.FsmObject => actionData.FsmObjectParams[paramDataPos],
-                    ParamDataType.FsmVar => actionData.FsmVarParams[paramDataPos],
-                    ParamDataType.FsmString => actionData.FsmStringParams[paramDataPos],
-                    ParamDataType.FsmEvent => actionData.StringParams[paramDataPos],
-                    ParamDataType.FsmEventTarget => actionData.FsmEventTargetParams[paramDataPos],
-                    ParamDataType.FsmArray => actionData.FsmArrayParams[paramDataPos],
-                    ParamDataType.ObjectReference => new FsmObject { Value = actionData.UnityObjectParams[paramDataPos] },
-                    ParamDataType.FunctionCall => actionData.FunctionCallParams[paramDataPos],
-                    ParamDataType.Array => ConvertActionDataArray(actionData, ref paramIdx),
-                    ParamDataType.FsmProperty => actionData.FsmPropertyParams[paramDataPos],
-                    ParamDataType.FsmMaterial => new FsmMaterial(actionData.FsmObjectParams[paramDataPos]),
-                    ParamDataType.FsmTexture => new FsmTexture(actionData.FsmObjectParams[paramDataPos]),
-                    _ => $"[{paramDataType} not implemented]",
-                };
-            }
-            catch
-            {
-                // invalid read (probably out of bounds params array read)
-                ret = $"[invalid {paramDataType} variable]";
-            }
+                ParamDataType.FsmBool when Version > 1 => actionData.FsmBoolParams[paramDataPos],
+                ParamDataType.FsmInt when Version > 1 => actionData.FsmIntParams[paramDataPos],
+                ParamDataType.FsmFloat when Version > 1 => actionData.FsmFloatParams[paramDataPos],
+                ParamDataType.FsmVector2 when Version > 1 => actionData.FsmVector2Params[paramDataPos],
+                ParamDataType.FsmVector3 when Version > 1 => actionData.FsmVector3Params[paramDataPos],
+                ParamDataType.FsmQuaternion when Version > 1 => actionData.FsmQuaternionParams[paramDataPos],
+                ParamDataType.FsmColor when Version > 1 => actionData.FsmColorParams[paramDataPos],
+                ParamDataType.FsmRect when Version > 1 => actionData.FsmRectParams[paramDataPos],
+                ///////////////////////////////////////////////////////// 
+                ParamDataType.FsmEnum => actionData.FsmEnumParams[paramDataPos],
+                ParamDataType.FsmGameObject => actionData.FsmGameObjectParams[paramDataPos],
+                ParamDataType.FsmOwnerDefault => actionData.FsmOwnerDefaultParams[paramDataPos],
+                ParamDataType.FsmObject => actionData.FsmObjectParams[paramDataPos],
+                ParamDataType.FsmVar => actionData.FsmVarParams[paramDataPos],
+                ParamDataType.FsmString => actionData.FsmStringParams[paramDataPos],
+                ParamDataType.FsmEvent => actionData.StringParams[paramDataPos],
+                ParamDataType.FsmEventTarget => actionData.FsmEventTargetParams[paramDataPos],
+                ParamDataType.FsmArray => actionData.FsmArrayParams[paramDataPos],
+                ParamDataType.ObjectReference => new FsmObject { Value = actionData.UnityObjectParams[paramDataPos] },
+                ParamDataType.FunctionCall => actionData.FunctionCallParams[paramDataPos],
+                ParamDataType.Array => ConvertActionDataArray(actionData, ref paramIdx),
+                ParamDataType.FsmProperty => actionData.FsmPropertyParams[paramDataPos],
+                ParamDataType.FsmMaterial => new FsmMaterial(actionData.FsmObjectParams[paramDataPos]),
+                ParamDataType.FsmTexture => new FsmTexture(actionData.FsmObjectParams[paramDataPos]),
+                _ => $"[{paramDataType} not implemented]",
+            };
+        }
+        catch
+        {
+            // invalid read (probably out of bounds params array read)
+            ret = $"[invalid {paramDataType} variable]";
         }
 
 
