@@ -28,4 +28,9 @@ public class FsmTemplateControl : IFsmPlaymakerValuePreviewer
         else
             FsmVarOverrides = [];
     }
+
+    public override string ToString()
+    {
+        return FsmTemplate.ToString();
+    }
 }
