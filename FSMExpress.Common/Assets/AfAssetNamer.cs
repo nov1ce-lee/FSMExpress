@@ -178,9 +178,35 @@ public class AfAssetNamer(AssetsManager manager, AssetsFileInstance inst)
         }
     }
 
-    public bool NameAssetPPtrFile(AssetPPtr pptr)
+    public bool NameAssetPPtrFile(NamedAssetPPtr pptr)
     {
-        pptr.SetFilePathFromFile(manager, inst);
+        var depInst = GetDepInstance(pptr);
+        if (depInst is not null)
+        {
+            pptr.FilePath = depInst.path;
+            if (depInst.parentBundle is not null)
+            {
+                pptr.BundleName = depInst.parentBundle.name;
+            }
+        }
+
         return !string.IsNullOrEmpty(pptr.FilePath);
+    }
+
+    private AssetsFileInstance? GetDepInstance(AssetPPtr pptr)
+    {
+        if (pptr.FileId == 0)
+        {
+            return inst;
+        }
+
+        int depIndex = pptr.FileId - 1;
+        AssetsFileInstance depInst = inst.GetDependency(manager, depIndex);
+        if (depInst != null)
+        {
+            return depInst;
+        }
+
+        return null;
     }
 }

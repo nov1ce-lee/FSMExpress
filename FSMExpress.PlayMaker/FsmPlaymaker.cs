@@ -481,6 +481,7 @@ public class FsmPlaymaker : IFsmMonoBehaviour
                 ParamDataType.FsmArray => actionData.FsmArrayParams[paramDataPos],
                 ParamDataType.ObjectReference => new FsmObject { Value = actionData.UnityObjectParams[paramDataPos] },
                 ParamDataType.FunctionCall => actionData.FunctionCallParams[paramDataPos],
+                ParamDataType.FsmTemplateControl => actionData.FsmTemplateControlParams[paramDataPos],
                 ParamDataType.Array => ConvertActionDataArray(actionData, ref paramIdx),
                 ParamDataType.FsmProperty => actionData.FsmPropertyParams[paramDataPos],
                 ParamDataType.FsmMaterial => new FsmMaterial(actionData.FsmObjectParams[paramDataPos]),

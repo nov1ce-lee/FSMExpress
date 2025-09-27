@@ -4,6 +4,7 @@ namespace FSMExpress.Common.Assets;
 public class NamedAssetPPtr : AssetPPtr
 {
     public string Name { get; set; }
+    public string? BundleName { get; set; }
 
     public NamedAssetPPtr() : base()
     {
@@ -37,6 +38,9 @@ public class NamedAssetPPtr : AssetPPtr
             fileText = Path.GetFileName(FilePath);
         else
             fileText = FileId.ToString();
+
+        if (BundleName is not null)
+            fileText = $"{BundleName}:{fileText}";
 
         if (PathId == 0)
             return "PPtr(null)";

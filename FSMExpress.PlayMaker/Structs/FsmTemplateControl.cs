@@ -5,32 +5,39 @@ using FSMExpress.Common.Interfaces;
 namespace FSMExpress.PlayMaker.Structs;
 public class FsmTemplateControl : IFsmPlaymakerValuePreviewer
 {
-    public NamedAssetPPtr FsmTemplate { get; set; }
-    public List<FsmVarOverride> FsmVarOverrides { get; set; }
+    public NamedAssetPPtr Target { get; set; }
+    public List<FsmVarOverride> InputVariables { get; set; }
+    public List<FsmVarOverride> OutputVariables { get; set; }
 
     public FsmDocumentNodeDataFieldKind FieldKind => FsmDocumentNodeDataFieldKind.Object;
 
     public FsmTemplateControl()
     {
-        FsmTemplate = new NamedAssetPPtr();
-        FsmVarOverrides = [];
+        Target = new NamedAssetPPtr();
+        InputVariables = [];
+        OutputVariables = [];
     }
 
     public FsmTemplateControl(IAssetField field)
     {
-        if (field.Exists("fsmTemplate"))
-            FsmTemplate = field.GetValue<NamedAssetPPtr>("fsmTemplate");
+        if (field.Exists("target"))
+            Target = field.GetValue<NamedAssetPPtr>("target");
         else
-            FsmTemplate = new NamedAssetPPtr();
+            Target = new NamedAssetPPtr();
 
-        if (field.Exists("fsmVarOverrides"))
-            FsmVarOverrides = field.GetValueArray("fsmVarOverrides", x => new FsmVarOverride(x));
+        if (field.Exists("inputVariables"))
+            InputVariables = field.GetValueArray("inputVariables", x => new FsmVarOverride(x));
         else
-            FsmVarOverrides = [];
+            InputVariables = [];
+
+        if (field.Exists("outputVariables"))
+            OutputVariables = field.GetValueArray("outputVariables", x => new FsmVarOverride(x));
+        else
+            OutputVariables = [];
     }
 
     public override string ToString()
     {
-        return FsmTemplate.ToString();
+        return Target.ToString();
     }
 }
