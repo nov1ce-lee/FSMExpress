@@ -14,13 +14,13 @@ using System.Threading.Tasks;
 // todo: this needs to be genericized
 
 namespace FSMExpress.ViewModels.Dialogs;
-public partial class FsmSelectorViewModel : ViewModelBase, IDialogAware<FsmSelectorListEntry>
+public partial class FsmSelectorViewModel : ViewModelBase, IDialogAware<IList<FsmSelectorListEntry>>
 {
     [ObservableProperty]
     private string _searchText = "";
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsFsmSelected))]
-    public FsmSelectorListEntry? _selectedEntry;
+    public ObservableCollection<FsmSelectorListEntry> _selectedEntries = [];
     [ObservableProperty]
     private RangeObservableCollection<FsmSelectorListEntry> _entries = [];
 
@@ -33,9 +33,9 @@ public partial class FsmSelectorViewModel : ViewModelBase, IDialogAware<FsmSelec
     public string Title => "FSM Selector";
     public int Width => 350;
     public int Height => 450;
-    public event Action<FsmSelectorListEntry?>? RequestClose;
+    public event Action<IList<FsmSelectorListEntry>?>? RequestClose;
 
-    public bool IsFsmSelected => SelectedEntry != null;
+    public bool IsFsmSelected => SelectedEntries.Count > 0;
 
     public Task AsyncInit() => FillFsmEntries();
 
@@ -57,7 +57,7 @@ public partial class FsmSelectorViewModel : ViewModelBase, IDialogAware<FsmSelec
             Entries.AddRange(_internalEntries.Where(e => e.Name.Contains(searchText, StringComparison.OrdinalIgnoreCase)));
 
         if (Entries.Count > 0)
-            SelectedEntry = Entries[0];
+            SelectedEntries = [Entries[0]];
     }
 
     public async Task FillFsmEntries()
@@ -157,18 +157,17 @@ public partial class FsmSelectorViewModel : ViewModelBase, IDialogAware<FsmSelec
         {
             monoBf = fsmTemp.MakeValue(fileInst.file.Reader, info.GetAbsoluteByteOffset(fileInst.file));
         }
+
         var fsmName = monoBf["fsm"]["name"].AsString;
-        var m_name = monoBf["m_Name"].AsString;
-        var goPtr = monoBf["m_GameObject"];
-        var goName = namer.GetName(goPtr["m_FileID"].AsInt, goPtr["m_PathID"].AsLong);
-        return $"{goName} - {fsmName} - {m_name}";
+        var name = monoBf["m_Name"].AsString;
+        return $"{fsmName} = {name}";
     }
 
-    public void PickSelectedEntry()
+    public void PickSelectedEntries()
     {
-        if (SelectedEntry is not null)
+        if (SelectedEntries.Count > 0)
         {
-            RequestClose?.Invoke(SelectedEntry);
+            RequestClose?.Invoke(SelectedEntries);
         }
     }
 

@@ -68,7 +68,7 @@ public partial class MainWindowViewModel : ViewModelBase
         return Path.Combine(Path.GetDirectoryName(ggmPath)!, sceneChoice.FileName);
     }
 
-    public async Task<AssetExternal?> PickFsm(string filePath)
+    public async Task<IEnumerable<AssetExternal>?> PickFsms(string filePath)
     {
         AssetsFileInstance fileInst;
 
@@ -108,12 +108,15 @@ public partial class MainWindowViewModel : ViewModelBase
             return null;
         }
 
-        var fsmChoice = await dialogService.ShowDialog(new FsmSelectorViewModel(_manager, fileInst));
-        if (fsmChoice == null)
+        var fsmChoices = await dialogService.ShowDialog(new FsmSelectorViewModel(_manager, fileInst));
+        if (fsmChoices is null)
             return null;
 
-        var fsmFileInst = _manager.FileLookup[fsmChoice.Ptr.FilePath.ToLowerInvariant()];
-        return _manager.GetExtAsset(fsmFileInst, 0, fsmChoice.Ptr.PathId);
+        return fsmChoices.Select(fsm =>
+        {
+            var fsmFileInst = _manager.FileLookup[fsm.Ptr.FilePath.ToLowerInvariant()];
+            return _manager.GetExtAsset(fsmFileInst, 0, fsm.Ptr.PathId);
+        });
     }
 
     private void LoadPlaymakerFsm(AssetExternal fsmExt)
@@ -152,11 +155,14 @@ public partial class MainWindowViewModel : ViewModelBase
         var fileName = fileNames[0];
         LastOpenedPath = fileName;
 
-        var selectedFsm = await PickFsm(fileName);
-        if (!selectedFsm.HasValue)
+        var selectedFsms = await PickFsms(fileName);
+        if (selectedFsms is null)
             return;
 
-        LoadPlaymakerFsm(selectedFsm.Value);
+        foreach (var fsm in selectedFsms)
+        {
+            LoadPlaymakerFsm(fsm);
+        }
     }
 
     public async void FileOpenSceneList()
@@ -176,11 +182,14 @@ public partial class MainWindowViewModel : ViewModelBase
 
         LastOpenedPath = scenePath;
 
-        var selectedFsm = await PickFsm(scenePath);
-        if (!selectedFsm.HasValue)
+        var selectedFsms = await PickFsms(scenePath);
+        if (selectedFsms is null)
             return;
 
-        LoadPlaymakerFsm(selectedFsm.Value);
+        foreach (var fsm in selectedFsms)
+        {
+            LoadPlaymakerFsm(fsm);
+        }
     }
 
     public async void FileOpenResourcesAssets()
@@ -196,11 +205,14 @@ public partial class MainWindowViewModel : ViewModelBase
 
         LastOpenedPath = resourcesPath;
 
-        var selectedFsm = await PickFsm(resourcesPath);
-        if (!selectedFsm.HasValue)
+        var selectedFsms = await PickFsms(resourcesPath);
+        if (selectedFsms is null)
             return;
 
-        LoadPlaymakerFsm(selectedFsm.Value);
+        foreach (var fsm in selectedFsms)
+        {
+            LoadPlaymakerFsm(fsm);
+        }
     }
 
     public async void FileOpenCatalog()
@@ -268,11 +280,14 @@ public partial class MainWindowViewModel : ViewModelBase
             return;
         }
 
-        var selectedFsm = await PickFsm(LastOpenedPath);
-        if (!selectedFsm.HasValue)
+        var selectedFsms = await PickFsms(LastOpenedPath);
+        if (selectedFsms is null)
             return;
 
-        LoadPlaymakerFsm(selectedFsm.Value);
+        foreach (var fsm in selectedFsms)
+        {
+            LoadPlaymakerFsm(fsm);
+        }
     }
 
     public async void ConfigSetGamePath()
