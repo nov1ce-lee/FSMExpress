@@ -43,6 +43,23 @@
       </TextBlock>
     </DataTemplate>
     
+    <DataTemplate DataType="{x:Type fcd:FsmDocumentNodeClassField}">
+      <TextBlock
+        Text="{Binding TypeRef.ClassName}"
+        HorizontalAlignment="Stretch"
+        FontWeight="Bold"
+        Padding="5"
+        Height="28">
+        <TextBlock.Background>
+          <MultiBinding Converter="{StaticResource BoolObjectConverter}">
+            <Binding Path="IsEnabled" />
+            <DynamicResource ResourceKey="ListHeaderNormal" />
+            <DynamicResource ResourceKey="ListHeaderDisabled" />
+          </MultiBinding>
+        </TextBlock.Background>
+      </TextBlock>
+    </DataTemplate>
+    
     <!-- SelectableTextBlock must have Background for hit testing -->
     <DataTemplate DataType="{x:Type fcd:FsmDocumentNodeDataField}">
       <Grid ColumnDefinitions="4*,5*">
